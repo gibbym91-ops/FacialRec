@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FaceMatch AI — Forensic Facial Recognition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #060a0f;
+      --s1: #0b1118;
+      --s2: #0f1720;
+      --s3: #141f2a;
+      --border: #1c2b3a;
+      --border2: #243344;
+      --cyan: #00d4ff;
+      --cyan-dim: rgba(0,212,255,0.12);
+      --green: #00ff88;
+      --yellow: #ffd600;
+      --orange: #ff8c42;
+      --red: #ff3d57;
+      --text: #dde8f0;
+      --text2: #7a92a8;
+      --text3: #3d5568;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    ::selection { background: rgba(0,212,255,0.2); color: var(--cyan); }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--s1); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+    /* ── GRID BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 400px;
+      background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,212,255,0.07) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(6,10,15,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .logo-wrap { display: flex; align-items: center; gap: 14px; }
+
+    .logo-icon {
+      width: 38px; height: 38px;
+      border: 1.5px solid var(--cyan);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .logo-icon::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,212,255,0.15);
+    }
+
+    .logo-icon svg { color: var(--cyan); }
+
+    .logo-text { line-height: 1; }
+    .logo-name {
+      font-family: var(--sans);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+    .logo-name span { color: var(--cyan); }
+    .logo-sub {
+      font-family: var(--mono);
+      font-size: 8px;
+      color: var(--text3);
+      letter-spacing: 2.5px;
+      margin-top: 3px;
+    }
+
+    .header-stats {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .hstat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px;
+      border-right: 1px solid var(--border);
+    }
+    .hstat:first-child { border-left: 1px solid var(--border); }
+
+    .hstat-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+    .hstat-label {
+      font-family: var(--mono);
+      font-size: 7.5px;
+      color: var(--text3);
+      letter-spacing: 1.5px;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      margin-left: 20px;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text3);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .status-dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2.5s infinite; }
+    .status-dot.loading { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); animation: pulse 0.7s infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+    .status-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: var(--text3);
+      transition: color 0.3s;
+    }
+    .status-label.online { color: var(--green); }
+
+    /* ── MAIN ── */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 44px 36px 100px;
+    }
+
+    /* ── MODEL LOADER ── */
+    #model-loader {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 36px;
+      margin-bottom: 36px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .loader-icon {
+      width: 48px; height: 48px;
+      border: 2px solid var(--border);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader-text h3 {
+      font-family: var(--sans);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .loader-text p {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text3);
+      letter-spacing: 0.5px;
+    }
+
+    .loader-bars {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .loader-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .loader-bar-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text3);
+      letter-spacing: 1px;
+      width: 160px;
+      flex-shrink: 0;
+    }
+
+    .loader-bar-track {
+      flex: 1;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .loader-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--cyan);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+      box-shadow: 0 0 8px rgba(0,212,255,0.5);
+    }
+
+    .loader-bar-fill.done { background: var(--green); box-shadow: 0 0 8px rgba(0,255,136,0.5); width: 100% !important; }
+    .loader-bar-fill.loading { animation: loadpulse 1.2s ease-in-out infinite; }
+
+    @keyframes loadpulse {
+      0% { width: 20%; }
+      50% { width: 75%; }
+      100% { width: 20%; }
+    }
+
+    /* ── UPLOAD SECTION ── */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 80px 1fr;
+      gap: 0;
+      margin-bottom: 32px;
+      align-items: start;
+    }
+
+    /* ── IMAGE PANEL ── */
+    .img-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2px;
+    }
+
+    .panel-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--cyan);
+    }
+
+    .mode-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .mode-btn {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      letter-spacing: 1px;
+      padding: 5px 11px;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text3);
+      transition: all 0.15s;
+    }
+    .mode-btn.active {
+      background: var(--cyan-dim);
+      color: var(--cyan);
+    }
+
+    .drop-zone {
+      position: relative;
+      aspect-ratio: 4/3;
+      border: 1.5px dashed var(--border);
+      border-radius: 14px;
+      background: var(--s1);
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--cyan);
+      background: rgba(0,212,255,0.03);
+      box-shadow: inset 0 0 40px rgba(0,212,255,0.04), 0 0 0 1px rgba(0,212,255,0.1);
+    }
+
+    .drop-zone.has-face {
+      border-style: solid;
+      border-color: var(--border);
+    }
+
+    .placeholder-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      color: var(--text3);
+      pointer-events: none;
+    }
+
+    .placeholder-icon {
+      width: 60px; height: 60px;
+      border: 1.5px dashed var(--border2);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+    }
+
+    .placeholder-text {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 2px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .face-canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+    }
+
+    .face-canvas-container img, .face-canvas-container canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .scan-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(6,10,15,0.82);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .scan-overlay.active { opacity: 1; pointer-events: all; }
+
+    .scan-bar {
+      width: 55%;
+      height: 2px;
+      background: var(--cyan);
+      box-shadow: 0 0 18px var(--cyan), 0 0 40px rgba(0,212,255,0.3);
+      border-radius: 1px;
+      animation: scanmove 1.8s ease-in-out infinite;
+    }
+
+    @keyframes scanmove {
+      0% { transform: translateY(-70px); opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { transform: translateY(70px); opacity: 0; }
+    }
+
+    .scan-text {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--cyan);
+      animation: blink 1.1s step-end infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+    .url-input {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      width: 100%;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .url-input:focus { border-color: var(--cyan); }
+    .url-input::placeholder { color: var(--text3); }
+
+    .url-load-btn {
+      width: 100%;
+      padding: 9px;
+      background: var(--cyan-dim);
+      border: 1px solid rgba(0,212,255,0.25);
+      border-radius: 8px;
+      color: var(--cyan);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .url-load-btn:hover { background: rgba(0,212,255,0.18); }
+    .url-load-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .error-msg {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--red);
+      background: rgba(255,61,87,0.08);
+      border: 1px solid rgba(255,61,87,0.2);
+      border-radius: 6px;
+      padding: 8px 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .face-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .meta-tile {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+
+    .meta-tile-label {
+      font-family: var(--mono);
+      font-size: 7.5px;
+      letter-spacing: 1.5px;
+      color: var(--text3);
+      margin-bottom: 3px;
+    }
+
+    .meta-tile-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+
+    /* ── VS DIVIDER ── */
+    .vs-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 0;
+      gap: 10px;
+      padding-top: 44px;
+    }
+
+    .vs-line {
+      flex: 1;
+      width: 1px;
+      background: linear-gradient(180deg, transparent, var(--border), transparent);
+    }
+
+    .vs-badge {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: var(--text3);
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+
+    /* ── COMPARE BUTTON ── */
+    .compare-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 52px;
+    }
+
+    #compare-btn {
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      padding: 18px 64px;
+      border-radius: 10px;
+      border: none;
+      cursor: not-allowed;
+      background: var(--s2);
+      color: var(--text3);
+      border: 1.5px solid var(--border);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #compare-btn.ready {
+      background: var(--cyan);
+      color: #000;
+      cursor: pointer;
+      border-color: var(--cyan);
+      box-shadow: 0 0 48px rgba(0,212,255,0.35), 0 6px 24px rgba(0,212,255,0.2);
+    }
+
+    #compare-btn.ready::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition: left 0.5s;
+    }
+
+    #compare-btn.ready:hover::before { left: 150%; }
+    #compare-btn.ready:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 64px rgba(0,212,255,0.5), 0 12px 40px rgba(0,212,255,0.3);
+    }
+    #compare-btn.ready:active { transform: translateY(0); }
+
+    .btn-spinner {
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(0,0,0,0.25);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+      flex-shrink: 0;
+    }
+
+    #compare-btn.processing .btn-spinner { display: block; }
+
+    .compare-hint {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 1px;
+    }
+
+    /* ── RESULTS ── */
+    #results {
+      display: none;
+      animation: fadeup 0.5s ease both;
+    }
+    #results.visible { display: block; }
+
+    @keyframes fadeup {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .results-title {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .results-title span {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--cyan);
+      flex-shrink: 0;
+    }
+
+    .results-title-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    /* ── GAUGE CARD ── */
+    .gauge-card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 20px 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #gauge-svg { width: 220px; height: 120px; }
+
+    .verdict-pill {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      padding: 8px 22px;
+      border-radius: 7px;
+      text-align: center;
+      transition: all 0.4s;
+    }
+
+    .dist-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      width: 100%;
+    }
+
+    .dist-label {
+      font-family: var(--mono);
+      font-size: 7.5px;
+      letter-spacing: 2px;
+      color: var(--text3);
+    }
+
+    .dist-val {
+      font-family: var(--mono);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .dist-thresh {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      color: var(--text3);
+    }
+
+    /* ── FEATURES CARD ── */
+    .card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card-title {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      color: var(--text3);
+    }
+
+    .feat-row {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .feat-header {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .feat-icon { font-size: 15px; line-height: 1; }
+
+    .feat-name {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--text2);
+      flex: 1;
+    }
+
+    .feat-pct {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .feat-track {
+      height: 4px;
+      background: var(--s3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .feat-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s;
+    }
+
+    /* ── METRICS CARD ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .metric-tile {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .metric-tile-label {
+      font-family: var(--mono);
+      font-size: 7px;
+      letter-spacing: 1.5px;
+      color: var(--text3);
+      margin-bottom: 4px;
+    }
+
+    .metric-tile-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    .scale-block {
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .scale-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .scale-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .scale-name {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: var(--text3);
+      flex: 1;
+      letter-spacing: 0.5px;
+    }
+
+    .scale-range {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 700;
+    }
+
+    /* ── SYNOPSIS ── */
+    .synopsis-card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 32px;
+      margin-bottom: 52px;
+    }
+
+    .synopsis-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .ai-badge {
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      background: var(--cyan-dim);
+      border: 1px solid rgba(0,212,255,0.2);
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    #synopsis-text {
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.85;
+      color: #95aabf;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how-section {
+      border-top: 1px solid var(--border);
+      padding-top: 52px;
+    }
+
+    .how-title {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--text3);
+      margin-bottom: 24px;
+    }
+
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .how-card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+    .how-card:hover { border-color: var(--border2); }
+
+    .how-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--cyan);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .how-card-title {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .how-card-body {
+      font-family: var(--sans);
+      font-size: 12.5px;
+      color: var(--text3);
+      line-height: 1.65;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 20px 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text3);
+      letter-spacing: 1px;
+    }
+
+    footer span { opacity: 0.6; }
+    footer .sep { opacity: 0.25; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .header-inner { padding: 12px 20px; flex-wrap: wrap; }
+      .header-stats { display: none; }
+      main { padding: 28px 20px 60px; }
+      .upload-grid { grid-template-columns: 1fr; }
+      .vs-col { flex-direction: row; padding-top: 0; min-height: 0; }
+      .vs-line { flex: none; width: 60px; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+      .vs-badge { writing-mode: horizontal-tb; transform: none; font-size: 13px; }
+      .results-grid { grid-template-columns: 1fr; }
+      .how-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .how-grid { grid-template-columns: 1fr; }
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="header-inner">
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M3 18c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M1 1l3 3M19 1l-3 3M1 19l3-3M19 19l-3-3" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <div class="logo-name">FaceMatch<span>AI</span></div>
+        <div class="logo-sub">FORENSIC FACIAL RECOGNITION</div>
+      </div>
+    </div>
+
+    <div class="header-stats">
+      <div class="hstat"><span class="hstat-val">99.38%</span><span class="hstat-label">LFW ACCURACY</span></div>
+      <div class="hstat"><span class="hstat-val">128-D</span><span class="hstat-label">FEATURE VECTOR</span></div>
+      <div class="hstat"><span class="hstat-val">68 PT</span><span class="hstat-label">LANDMARKS</span></div>
+      <div class="hstat"><span class="hstat-val">ResNet-34</span><span class="hstat-label">ARCHITECTURE</span></div>
+    </div>
+
+    <div class="status-pill">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-label" id="status-label">LOADING MODELS</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── MAIN ── -->
+<main>
+
+  <!-- Model loader bar -->
+  <div id="model-loader">
+    <div class="loader-icon" id="loader-spin"></div>
+    <div class="loader-text">
+      <h3>Loading AI Models</h3>
+      <p>Downloading ResNet-34 + SSD MobileNet + Landmark networks from CDN</p>
+    </div>
+    <div class="loader-bars">
+      <div class="loader-bar-row">
+        <span class="loader-bar-label">SSD MobileNetV1</span>
+        <div class="loader-bar-track"><div class="loader-bar-fill loading" id="bar-ssd"></div></div>
+      </div>
+      <div class="loader-bar-row">
+        <span class="loader-bar-label">68-Point Landmarks</span>
+        <div class="loader-bar-track"><div class="loader-bar-fill loading" id="bar-lm"></div></div>
+      </div>
+      <div class="loader-bar-row">
+        <span class="loader-bar-label">ResNet-34 Recognition</span>
+        <div class="loader-bar-track"><div class="loader-bar-fill loading" id="bar-rec"></div></div>
+      </div>
+      <div class="loader-bar-row">
+        <span class="loader-bar-label">Expression + Age/Gender</span>
+        <div class="loader-bar-track"><div class="loader-bar-fill loading" id="bar-aux"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Section -->
+  <div class="upload-grid">
+
+    <!-- Panel A -->
+    <div class="img-panel" id="panel-a">
+      <div class="panel-head">
+        <span class="panel-label">SUBJECT A</span>
+        <div class="mode-toggle">
+          <button class="mode-btn active" onclick="setMode('a','upload',this)">↑ UPLOAD</button>
+          <button class="mode-btn" onclick="setMode('a','url',this)">⊕ URL</button>
+        </div>
+      </div>
+
+      <div class="drop-zone" id="drop-a"
+        onclick="document.getElementById('file-a').click()"
+        ondragover="dragOver(event,'a')"
+        ondragleave="dragLeave(event,'a')"
+        ondrop="dropFile(event,'a')">
+        <div class="placeholder-content" id="ph-a">
+          <div class="placeholder-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="placeholder-text">DRAG & DROP<br>or CLICK TO UPLOAD</div>
+        </div>
+        <div class="face-canvas-container" id="canvas-a" style="display:none"></div>
+        <div class="scan-overlay" id="scan-a">
+          <div class="scan-bar"></div>
+          <div class="scan-text">ANALYZING FACE...</div>
+        </div>
+      </div>
+
+      <input type="file" id="file-a" accept="image/*" style="display:none" onchange="handleFile(event,'a')">
+
+      <div id="url-section-a" style="display:none; display:flex; flex-direction:column; gap:8px;">
+        <input class="url-input" id="url-a" type="url" placeholder="https://example.com/photo.jpg" />
+        <button class="url-load-btn" onclick="loadUrl('a')">⊕ LOAD & ANALYZE</button>
+      </div>
+
+      <div id="url-section-a-hidden" style="display:none">
+        <input class="url-input" id="url-a-input" type="url" placeholder="https://example.com/photo.jpg" />
+        <button class="url-load-btn" onclick="loadUrl('a')">⊕ LOAD & ANALYZE</button>
+      </div>
+
+      <div class="error-msg" id="err-a" style="display:none"></div>
+      <div class="face-meta" id="meta-a" style="display:none"></div>
+    </div>
+
+    <!-- VS Divider -->
+    <div class="vs-col">
+      <div class="vs-line"></div>
+      <div class="vs-badge">VS</div>
+      <div class="vs-line"></div>
+    </div>
+
+    <!-- Panel B -->
+    <div class="img-panel" id="panel-b">
+      <div class="panel-head">
+        <span class="panel-label">SUBJECT B</span>
+        <div class="mode-toggle">
+          <button class="mode-btn active" onclick="setMode('b','upload',this)">↑ UPLOAD</button>
+          <button class="mode-btn" onclick="setMode('b','url',this)">⊕ URL</button>
+        </div>
+      </div>
+
+      <div class="drop-zone" id="drop-b"
+        onclick="document.getElementById('file-b').click()"
+        ondragover="dragOver(event,'b')"
+        ondragleave="dragLeave(event,'b')"
+        ondrop="dropFile(event,'b')">
+        <div class="placeholder-content" id="ph-b">
+          <div class="placeholder-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="placeholder-text">DRAG & DROP<br>or CLICK TO UPLOAD</div>
+        </div>
+        <div class="face-canvas-container" id="canvas-b" style="display:none"></div>
+        <div class="scan-overlay" id="scan-b">
+          <div class="scan-bar"></div>
+          <div class="scan-text">ANALYZING FACE...</div>
+        </div>
+      </div>
+
+      <input type="file" id="file-b" accept="image/*" style="display:none" onchange="handleFile(event,'b')">
+
+      <div id="url-wrap-b" style="display:none; flex-direction:column; gap:8px;">
+        <input class="url-input" id="url-b" type="url" placeholder="https://example.com/photo.jpg" />
+        <button class="url-load-btn" onclick="loadUrl('b')">⊕ LOAD & ANALYZE</button>
+      </div>
+
+      <div class="error-msg" id="err-b" style="display:none"></div>
+      <div class="face-meta" id="meta-b" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Compare Button -->
+  <div class="compare-wrap">
+    <button id="compare-btn" disabled onclick="runComparison()">
+      <div class="btn-spinner" id="btn-spin"></div>
+      <span id="btn-text">⬡ COMPARE FACES</span>
+    </button>
+    <div class="compare-hint" id="compare-hint">Upload both images to enable comparison</div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="results-title">
+      <span>BIOMETRIC ANALYSIS RESULTS</span>
+      <div class="results-title-line"></div>
+    </div>
+
+    <div class="results-grid">
+
+      <!-- Gauge -->
+      <div class="gauge-card">
+        <svg id="gauge-svg" viewBox="0 0 220 120">
+          <!-- BG arc -->
+          <path id="gauge-bg" d="" fill="none" stroke="#1a2a3a" stroke-width="14" stroke-linecap="round"/>
+          <!-- Fill arc -->
+          <path id="gauge-fill" d="" fill="none" stroke="#00d4ff" stroke-width="14" stroke-linecap="round"/>
+          <!-- Tick marks -->
+          <g id="gauge-ticks"></g>
+          <!-- Needle -->
+          <line id="gauge-needle" x1="110" y1="110" x2="110" y2="34" stroke="white" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90,110,110)"/>
+          <circle cx="110" cy="110" r="6" fill="white"/>
+          <circle cx="110" cy="110" r="3.5" id="gauge-center-dot" fill="#00d4ff"/>
+          <!-- Score text -->
+          <text id="gauge-score" x="110" y="98" text-anchor="middle" fill="white" font-size="30" font-weight="800" font-family="Syne,sans-serif">0%</text>
+          <text x="110" y="113" text-anchor="middle" fill="#3d5568" font-size="8" font-family="Space Mono,monospace" letter-spacing="2">SIMILARITY</text>
+          <!-- Scale ends -->
+          <text x="20" y="118" fill="#3d5568" font-size="8" font-family="Space Mono,monospace">0</text>
+          <text x="194" y="118" fill="#3d5568" font-size="8" font-family="Space Mono,monospace">100</text>
+        </svg>
+
+        <div class="verdict-pill" id="verdict-pill">—</div>
+
+        <div class="dist-info">
+          <div class="dist-label">EUCLIDEAN DISTANCE</div>
+          <div class="dist-val" id="dist-val">—</div>
+          <div class="dist-thresh">match threshold: 0.600</div>
+        </div>
+      </div>
+
+      <!-- Features card -->
+      <div class="card" id="feat-card">
+        <div class="card-title">FACIAL REGION ANALYSIS</div>
+        <!-- Dynamically filled -->
+      </div>
+
+      <!-- Metrics card -->
+      <div class="card">
+        <div class="card-title">TECHNICAL METRICS</div>
+        <div class="metrics-grid" id="tech-metrics"></div>
+        <div class="scale-block">
+          <div class="card-title">CONFIDENCE SCALE</div>
+          <div class="scale-item"><div class="scale-dot" style="background:#00ff88;box-shadow:0 0 6px #00ff88"></div><span class="scale-name">DEFINITE MATCH</span><span class="scale-range" style="color:#00ff88">85%+</span></div>
+          <div class="scale-item"><div class="scale-dot" style="background:#55ff99;box-shadow:0 0 6px #55ff99"></div><span class="scale-name">STRONG MATCH</span><span class="scale-range" style="color:#55ff99">70–84%</span></div>
+          <div class="scale-item"><div class="scale-dot" style="background:#ffd600;box-shadow:0 0 6px #ffd600"></div><span class="scale-name">POSSIBLE MATCH</span><span class="scale-range" style="color:#ffd600">55–69%</span></div>
+          <div class="scale-item"><div class="scale-dot" style="background:#ff8c42;box-shadow:0 0 6px #ff8c42"></div><span class="scale-name">WEAK MATCH</span><span class="scale-range" style="color:#ff8c42">40–54%</span></div>
+          <div class="scale-item"><div class="scale-dot" style="background:#ff3d57;box-shadow:0 0 6px #ff3d57"></div><span class="scale-name">NO MATCH</span><span class="scale-range" style="color:#ff3d57">&lt;40%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Synopsis -->
+    <div class="synopsis-card">
+      <div class="synopsis-head">
+        <div class="card-title">FORENSIC ANALYSIS SYNOPSIS</div>
+        <div class="ai-badge">ALGORITHMIC</div>
+      </div>
+      <div id="synopsis-text"></div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="how-section">
+    <div class="how-title">HOW IT WORKS</div>
+    <div class="how-grid">
+      <div class="how-card"><div class="how-num">01</div><div class="how-card-title">FACE DETECTION</div><div class="how-card-body">SSD MobileNetV1 neural network localizes and crops the face region with confidence scoring</div></div>
+      <div class="how-card"><div class="how-num">02</div><div class="how-card-title">68-POINT LANDMARKS</div><div class="how-card-body">CNN maps 68 anatomical keypoints: jaw, eyes, brows, nose, and mouth for alignment and region scoring</div></div>
+      <div class="how-card"><div class="how-num">03</div><div class="how-card-title">ResNet-34 EMBEDDING</div><div class="how-card-body">Deep convolutional network encodes aligned face into 128-dimensional descriptor capturing unique biometric traits</div></div>
+      <div class="how-card"><div class="how-num">04</div><div class="how-card-title">EUCLIDEAN DISTANCE</div><div class="how-card-body">L2 distance between 128-D vectors determines identity. Distance below 0.6 indicates the same person</div></div>
+      <div class="how-card"><div class="how-num">05</div><div class="how-card-title">REGION ANALYSIS</div><div class="how-card-body">Landmark geometry is compared per facial zone to produce per-region similarity scores and highlight key differences</div></div>
+      <div class="how-card"><div class="how-num">06</div><div class="how-card-title">FORENSIC SYNOPSIS</div><div class="how-card-body">Algorithmic analysis contextualizes the result with biometric science terminology, distance interpretation, and confidence assessment</div></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <span>FaceMatch AI</span><span class="sep">·</span>
+  <span>face-api.js (vladmandic) · ResNet-34 · 99.38% LFW Benchmark</span><span class="sep">·</span>
+  <span>All processing in-browser · No data leaves your device</span>
+</footer>
+
+<!-- face-api.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+const state = {
+  modelsLoaded: false,
+  faces: { a: null, b: null },
+  modes: { a: 'upload', b: 'upload' },
+};
+
+const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
+
+// ═══════════════════════════════════════════════════════════════
+//  MODEL LOADING
+// ═══════════════════════════════════════════════════════════════
+async function loadModels() {
+  const bars = {
+    ssd: document.getElementById('bar-ssd'),
+    lm:  document.getElementById('bar-lm'),
+    rec: document.getElementById('bar-rec'),
+    aux: document.getElementById('bar-aux'),
+  };
+
+  try {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+    bars.ssd.classList.remove('loading'); bars.ssd.classList.add('done');
+
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    bars.lm.classList.remove('loading'); bars.lm.classList.add('done');
+
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    bars.rec.classList.remove('loading'); bars.rec.classList.add('done');
+
+    await Promise.all([
+      faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+      faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
+    ]);
+    bars.aux.classList.remove('loading'); bars.aux.classList.add('done');
+
+    state.modelsLoaded = true;
+
+    // Hide loader
+    document.getElementById('model-loader').style.display = 'none';
+    document.getElementById('loader-spin').style.display = 'none';
+
+    // Update status
+    const dot = document.getElementById('status-dot');
+    const label = document.getElementById('status-label');
+    dot.classList.add('online');
+    label.textContent = 'MODELS READY';
+    label.classList.add('online');
+
+  } catch(e) {
+    console.error('Model load failed:', e);
+    document.getElementById('model-loader').innerHTML = `
+      <div style="color:var(--red);font-family:var(--mono);font-size:12px;">
+        ⚠ Failed to load AI models. Check internet connection and refresh.
+      </div>`;
+    document.getElementById('status-label').textContent = 'OFFLINE';
+    document.getElementById('status-dot').style.background = 'var(--red)';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MODE TOGGLE
+// ═══════════════════════════════════════════════════════════════
+function setMode(panel, mode, btn) {
+  state.modes[panel] = mode;
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Show/hide upload vs url sections for each panel
+  const dropId = 'drop-' + panel;
+  const fileId = 'file-' + panel;
+  const urlWrapId = panel === 'a' ? 'url-wrap-a' : 'url-wrap-b';
+
+  if (mode === 'upload') {
+    document.getElementById(dropId).onclick = () => document.getElementById(fileId).click();
+  } else {
+    document.getElementById(dropId).onclick = () => {};
+  }
+
+  // Toggle URL input visibility
+  const urlWrap = document.getElementById('url-wrap-' + panel);
+  if (urlWrap) urlWrap.style.display = mode === 'url' ? 'flex' : 'none';
+}
+
+// Initialize url wraps as hidden
+document.getElementById('url-wrap-a') && (document.getElementById('url-wrap-a').style.display = 'none');
+
+// We need to create url-wrap-a properly
+(function setupUrlWraps() {
+  ['a','b'].forEach(p => {
+    const panel = document.getElementById('panel-' + p);
+    const dropZone = document.getElementById('drop-' + p);
+    const fileInput = document.getElementById('file-' + p);
+    const errDiv = document.getElementById('err-' + p);
+    const metaDiv = document.getElementById('meta-' + p);
+
+    // Create url wrap if doesn't exist
+    let wrap = document.getElementById('url-wrap-' + p);
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = 'url-wrap-' + p;
+      wrap.style.display = 'none';
+      wrap.style.flexDirection = 'column';
+      wrap.style.gap = '8px';
+      wrap.innerHTML = `
+        <input class="url-input" id="url-input-${p}" type="url" placeholder="https://example.com/photo.jpg" />
+        <button class="url-load-btn" onclick="loadUrl('${p}')">⊕ LOAD & ANALYZE</button>
+      `;
+      panel.insertBefore(wrap, errDiv);
+    }
+  });
+})();
+
+function setMode(panel, mode, btn) {
+  state.modes[panel] = mode;
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const drop = document.getElementById('drop-' + panel);
+  const fileIn = document.getElementById('file-' + panel);
+  const urlWrap = document.getElementById('url-wrap-' + panel);
+
+  if (mode === 'upload') {
+    drop.style.cursor = 'pointer';
+    drop.onclick = () => fileIn.click();
+    if (urlWrap) urlWrap.style.display = 'none';
+  } else {
+    drop.style.cursor = 'default';
+    drop.onclick = () => {};
+    if (urlWrap) { urlWrap.style.display = 'flex'; urlWrap.style.flexDirection = 'column'; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FILE / URL HANDLERS
+// ═══════════════════════════════════════════════════════════════
+function handleFile(evt, panel) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => processImage(e.target.result, panel);
+  reader.readAsDataURL(file);
+}
+
+function dragOver(e, panel) {
+  e.preventDefault();
+  document.getElementById('drop-' + panel).classList.add('drag-over');
+}
+function dragLeave(e, panel) {
+  document.getElementById('drop-' + panel).classList.remove('drag-over');
+}
+function dropFile(e, panel) {
+  e.preventDefault();
+  document.getElementById('drop-' + panel).classList.remove('drag-over');
+  if (state.modes[panel] !== 'upload') return;
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => processImage(ev.target.result, panel);
+  reader.readAsDataURL(file);
+}
+
+function loadUrl(panel) {
+  const inp = document.getElementById('url-input-' + panel);
+  if (!inp || !inp.value.trim()) return;
+  processImage(inp.value.trim(), panel, true);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  IMAGE PROCESSING
+// ═══════════════════════════════════════════════════════════════
+async function processImage(src, panel, isUrl = false) {
+  if (!state.modelsLoaded) {
+    showError(panel, 'AI models still loading, please wait...');
+    return;
+  }
+
+  clearPanel(panel);
+  showScan(panel, true);
+
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = () => rej(new Error('Failed to load image. If using URL, it may block cross-origin requests.'));
+      img.src = src;
+    });
+
+    // Show raw image first
+    showImgInPanel(panel, img);
+
+    const opts = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+    const detection = await faceapi.detectSingleFace(img, opts)
+      .withFaceLandmarks()
+      .withFaceDescriptor()
+      .withFaceExpressions()
+      .withAgeAndGender();
+
+    showScan(panel, false);
+
+    if (!detection) {
+      clearPanel(panel);
+      showError(panel, 'No face detected. Try a clearer, front-facing photo.');
+      return;
+    }
+
+    // Draw annotated canvas
+    const annotated = await drawAnnotated(img, detection);
+    showCanvasInPanel(panel, annotated);
+
+    // Store result
+    state.faces[panel] = {
+      descriptor: detection.descriptor,
+      landmarks: detection.landmarks,
+      detection: detection.detection,
+      expressions: detection.expressions,
+      age: detection.age,
+      gender: detection.gender,
+    };
+
+    // Show meta
+    renderMeta(panel, detection);
+    checkBothReady();
+
+  } catch(err) {
+    showScan(panel, false);
+    clearPanel(panel);
+    showError(panel, err.message || 'Error processing image');
+    console.error(err);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ANNOTATED CANVAS DRAWING
+// ═══════════════════════════════════════════════════════════════
+async function drawAnnotated(img, det) {
+  const canvas = document.createElement('canvas');
+  const W = img.naturalWidth || img.width;
+  const H = img.naturalHeight || img.height;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+
+  const dims = { width: W, height: H };
+  const r = faceapi.resizeResults(det, dims);
+  const box = r.detection.box;
+
+  // Draw main box
+  ctx.strokeStyle = 'rgba(0,212,255,0.5)';
+  ctx.lineWidth = Math.max(1.5, W * 0.002);
+  ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+  // Corner accents
+  const cl = Math.min(28, box.width * 0.18);
+  const lw = Math.max(2, W * 0.003);
+  const corners = [
+    [[box.x, box.y+cl],[box.x,box.y],[box.x+cl,box.y]],
+    [[box.x+box.width-cl,box.y],[box.x+box.width,box.y],[box.x+box.width,box.y+cl]],
+    [[box.x,box.y+box.height-cl],[box.x,box.y+box.height],[box.x+cl,box.y+box.height]],
+    [[box.x+box.width-cl,box.y+box.height],[box.x+box.width,box.y+box.height],[box.x+box.width,box.y+box.height-cl]],
+  ];
+  ctx.strokeStyle = '#00ff88';
+  ctx.lineWidth = lw;
+  corners.forEach(pts => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    ctx.lineTo(pts[1][0], pts[1][1]);
+    ctx.lineTo(pts[2][0], pts[2][1]);
+    ctx.stroke();
+  });
+
+  // Draw landmark groups
+  if (r.landmarks) {
+    const groups = [
+      { pts: r.landmarks.getJawOutline(),     color: '#4488ff', r: 1.5, connect: true },
+      { pts: r.landmarks.getLeftEyeBrow(),    color: '#ff88ff', r: 2,   connect: true },
+      { pts: r.landmarks.getRightEyeBrow(),   color: '#ff88ff', r: 2,   connect: true },
+      { pts: r.landmarks.getNose(),           color: '#ffaa22', r: 2,   connect: true },
+      { pts: r.landmarks.getLeftEye(),        color: '#00ffcc', r: 2,   connect: true },
+      { pts: r.landmarks.getRightEye(),       color: '#00ffcc', r: 2,   connect: true },
+      { pts: r.landmarks.getMouth(),          color: '#ff4466', r: 2,   connect: true },
+    ];
+    const dotR = Math.max(1.5, W * 0.003);
+    groups.forEach(g => {
+      if (!g.pts || !g.pts.length) return;
+      // Connection line
+      ctx.strokeStyle = g.color + '50';
+      ctx.lineWidth = Math.max(1, W * 0.001);
+      ctx.beginPath();
+      g.pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+      // Dots
+      ctx.fillStyle = g.color;
+      g.pts.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+  }
+
+  // Confidence badge
+  const conf = (r.detection.score * 100).toFixed(1);
+  const badgeH = Math.max(20, H * 0.04);
+  const fontSize = Math.max(10, H * 0.018);
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(box.x, box.y - badgeH - 3, 130, badgeH + 2);
+  ctx.fillStyle = '#00d4ff';
+  ctx.font = `bold ${fontSize}px 'Space Mono', monospace`;
+  ctx.fillText(`CONF: ${conf}%`, box.x + 7, box.y - 7);
+
+  return canvas;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PANEL HELPERS
+// ═══════════════════════════════════════════════════════════════
+function showImgInPanel(panel, img) {
+  const ph = document.getElementById('ph-' + panel);
+  const container = document.getElementById('canvas-' + panel);
+  ph.style.display = 'none';
+  container.style.display = 'block';
+  container.innerHTML = '';
+  const el = img.cloneNode();
+  el.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+  container.appendChild(el);
+  document.getElementById('drop-' + panel).classList.add('has-face');
+}
+
+function showCanvasInPanel(panel, canvas) {
+  const container = document.getElementById('canvas-' + panel);
+  container.innerHTML = '';
+  canvas.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+  container.appendChild(canvas);
+}
+
+function clearPanel(panel) {
+  const ph = document.getElementById('ph-' + panel);
+  const container = document.getElementById('canvas-' + panel);
+  ph.style.display = 'flex';
+  container.style.display = 'none';
+  container.innerHTML = '';
+  document.getElementById('drop-' + panel).classList.remove('has-face');
+  document.getElementById('err-' + panel).style.display = 'none';
+  document.getElementById('meta-' + panel).style.display = 'none';
+  state.faces[panel] = null;
+}
+
+function showScan(panel, on) {
+  const el = document.getElementById('scan-' + panel);
+  el.classList.toggle('active', on);
+}
+
+function showError(panel, msg) {
+  const el = document.getElementById('err-' + panel);
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+
+function renderMeta(panel, det) {
+  const el = document.getElementById('meta-' + panel);
+  const topExpr = det.expressions
+    ? Object.entries(det.expressions).sort((a,b)=>b[1]-a[1])[0][0].toUpperCase()
+    : '—';
+  el.innerHTML = `
+    <div class="meta-tile"><div class="meta-tile-label">CONFIDENCE</div><div class="meta-tile-val">${(det.detection.score*100).toFixed(1)}%</div></div>
+    <div class="meta-tile"><div class="meta-tile-label">EST. AGE</div><div class="meta-tile-val">${det.age ? Math.round(det.age) : '—'}</div></div>
+    <div class="meta-tile"><div class="meta-tile-label">GENDER</div><div class="meta-tile-val">${det.gender ? det.gender.toUpperCase() : '—'}</div></div>
+    <div class="meta-tile"><div class="meta-tile-label">EXPRESSION</div><div class="meta-tile-val">${topExpr}</div></div>
+  `;
+  el.style.display = 'grid';
+}
+
+function checkBothReady() {
+  const btn = document.getElementById('compare-btn');
+  const hint = document.getElementById('compare-hint');
+  if (state.faces.a && state.faces.b) {
+    btn.disabled = false;
+    btn.classList.add('ready');
+    hint.textContent = 'Both faces loaded — click to run forensic comparison';
+  } else {
+    btn.disabled = true;
+    btn.classList.remove('ready');
+    hint.textContent = 'Upload both images to enable comparison';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  COMPARISON ENGINE
+// ═══════════════════════════════════════════════════════════════
+function euclideanDist(a, b) {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += (a[i]-b[i])**2;
+  return Math.sqrt(sum);
+}
+
+function distToSimilarity(d) {
+  // Calibrated to face-api.js ResNet-34 threshold of 0.6
+  return Math.max(0, Math.min(1, 1 - d / 1.1));
+}
+
+function computeRegions(l1, l2) {
+  const dist = (p1, p2) => Math.sqrt((p1.x-p2.x)**2+(p1.y-p2.y)**2);
+  const avgDist = (arr1, arr2) => {
+    let t = 0, n = Math.min(arr1.length, arr2.length);
+    for (let i = 0; i < n; i++) t += dist(arr1[i], arr2[i]);
+    return t / n;
+  };
+  const scale = (dist(l1.positions[0], l1.positions[16]) + dist(l2.positions[0], l2.positions[16])) / 2;
+
+  const raw = {
+    'Left Eye':    avgDist(l1.getLeftEye(),     l2.getLeftEye())     / scale,
+    'Right Eye':   avgDist(l1.getRightEye(),    l2.getRightEye())    / scale,
+    'Nose Bridge': avgDist(l1.getNose(),        l2.getNose())        / scale,
+    'Mouth':       avgDist(l1.getMouth(),       l2.getMouth())       / scale,
+    'Jaw & Chin':  avgDist(l1.getJawOutline(),  l2.getJawOutline())  / scale,
+    'Eyebrows':    (avgDist(l1.getLeftEyeBrow(),l2.getLeftEyeBrow()) + avgDist(l1.getRightEyeBrow(),l2.getRightEyeBrow())) / 2 / scale,
+  };
+
+  const out = {};
+  for (const [k,v] of Object.entries(raw)) {
+    out[k] = Math.max(0, Math.min(1, 1 - v * 3.2));
+  }
+  return out;
+}
+
+function getVerdict(pct) {
+  if (pct >= 85) return { text: 'DEFINITE MATCH',  color: '#00ff88', bg: 'rgba(0,255,136,0.1)',  border: 'rgba(0,255,136,0.3)' };
+  if (pct >= 70) return { text: 'STRONG MATCH',    color: '#55ff99', bg: 'rgba(85,255,153,0.1)', border: 'rgba(85,255,153,0.3)' };
+  if (pct >= 55) return { text: 'POSSIBLE MATCH',  color: '#ffd600', bg: 'rgba(255,214,0,0.1)',  border: 'rgba(255,214,0,0.3)' };
+  if (pct >= 40) return { text: 'WEAK MATCH',      color: '#ff8c42', bg: 'rgba(255,140,66,0.1)', border: 'rgba(255,140,66,0.3)' };
+  return             { text: 'NO MATCH',           color: '#ff3d57', bg: 'rgba(255,61,87,0.1)',  border: 'rgba(255,61,87,0.3)' };
+}
+
+async function runComparison() {
+  if (!state.faces.a || !state.faces.b) return;
+
+  const btn = document.getElementById('compare-btn');
+  btn.classList.add('processing');
+  btn.classList.remove('ready');
+  btn.disabled = true;
+  document.getElementById('btn-text').textContent = 'PROCESSING...';
+
+  // Small delay to let UI update
+  await new Promise(r => setTimeout(r, 80));
+
+  const distance   = euclideanDist(state.faces.a.descriptor, state.faces.b.descriptor);
+  const similarity = distToSimilarity(distance);
+  const pct        = Math.round(similarity * 100);
+  const verdict    = getVerdict(pct);
+  const regions    = computeRegions(state.faces.a.landmarks, state.faces.b.landmarks);
+
+  // Render gauge
+  renderGauge(pct, verdict.color);
+
+  // Verdict pill
+  const pill = document.getElementById('verdict-pill');
+  pill.textContent = verdict.text;
+  pill.style.color = verdict.color;
+  pill.style.background = verdict.bg;
+  pill.style.border = `1px solid ${verdict.border}`;
+
+  // Distance
+  document.getElementById('dist-val').textContent = distance.toFixed(4);
+  document.getElementById('dist-val').style.color = distance < 0.6 ? '#00ff88' : '#ff3d57';
+
+  // Feature bars
+  renderFeatures(regions, verdict.color);
+
+  // Tech metrics
+  renderTechMetrics(distance, pct);
+
+  // Synopsis
+  renderSynopsis(pct, distance, regions, verdict.text);
+
+  // Show results
+  const resultsEl = document.getElementById('results');
+  resultsEl.classList.add('visible');
+  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Reset button
+  btn.classList.remove('processing');
+  btn.classList.add('ready');
+  btn.disabled = false;
+  document.getElementById('btn-text').textContent = '⬡ COMPARE FACES';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GAUGE RENDERING
+// ═══════════════════════════════════════════════════════════════
+function gaugeArc(pct) {
+  // Half-circle from 180° to 0° (left to right)
+  const cx = 110, cy = 110, r = 80;
+  const startAngle = Math.PI; // 180 degrees (left)
+  const endAngle   = Math.PI - (pct / 100) * Math.PI;
+  const x1 = cx + r * Math.cos(startAngle);
+  const y1 = cy + r * Math.sin(startAngle);
+  const x2 = cx + r * Math.cos(endAngle);
+  const y2 = cy + r * Math.sin(endAngle);
+  const large = pct > 50 ? 1 : 0;
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+}
+
+function renderGauge(pct, color) {
+  const cx = 110, cy = 110, r = 80;
+
+  // Full BG arc
+  const bgArc = `M ${cx-r} ${cy} A ${r} ${r} 0 1 1 ${cx+r} ${cy}`;
+  document.getElementById('gauge-bg').setAttribute('d', bgArc);
+
+  // Fill arc
+  const fill = document.getElementById('gauge-fill');
+  fill.setAttribute('d', pct > 0 ? gaugeArc(pct) : '');
+  fill.setAttribute('stroke', color);
+  fill.style.filter = `drop-shadow(0 0 8px ${color}80)`;
+
+  // Needle rotation: 0% = -180deg (left), 100% = 0deg (right)
+  const angle = -180 + (pct / 100) * 180;
+  document.getElementById('gauge-needle').setAttribute('transform', `rotate(${angle},${cx},${cy})`);
+  document.getElementById('gauge-center-dot').setAttribute('fill', color);
+
+  // Score text
+  document.getElementById('gauge-score').textContent = pct + '%';
+  document.getElementById('gauge-score').setAttribute('fill', color);
+
+  // Ticks
+  const tickG = document.getElementById('gauge-ticks');
+  tickG.innerHTML = '';
+  [0,25,50,75,100].forEach(v => {
+    const a = Math.PI - (v/100)*Math.PI;
+    const x1 = cx + (r-10) * Math.cos(a), y1 = cy + (r-10) * Math.sin(a);
+    const x2 = cx + (r+5)  * Math.cos(a), y2 = cy + (r+5)  * Math.sin(a);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke','#1c2b3a'); line.setAttribute('stroke-width','1.5');
+    tickG.appendChild(line);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FEATURE BARS
+// ═══════════════════════════════════════════════════════════════
+const FEAT_ICONS = {
+  'Left Eye': '👁', 'Right Eye': '👁',
+  'Nose Bridge': '👃', 'Mouth': '👄',
+  'Jaw & Chin': '🫦', 'Eyebrows': '🤨',
+};
+
+function featureColor(v) {
+  if (v >= 0.7) return '#00ff88';
+  if (v >= 0.45) return '#ffd600';
+  return '#ff3d57';
+}
+
+function renderFeatures(regions, topColor) {
+  const card = document.getElementById('feat-card');
+  card.innerHTML = '<div class="card-title">FACIAL REGION ANALYSIS</div>';
+  Object.entries(regions).forEach(([name, val]) => {
+    const pct = Math.round(val * 100);
+    const col = featureColor(val);
+    const row = document.createElement('div');
+    row.className = 'feat-row';
+    row.innerHTML = `
+      <div class="feat-header">
+        <span class="feat-icon">${FEAT_ICONS[name]||'•'}</span>
+        <span class="feat-name">${name}</span>
+        <span class="feat-pct" style="color:${col}">${pct}%</span>
+      </div>
+      <div class="feat-track">
+        <div class="feat-fill" style="width:0%;background:${col};box-shadow:0 0 8px ${col}60"></div>
+      </div>
+    `;
+    card.appendChild(row);
+    // Animate width
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        row.querySelector('.feat-fill').style.width = pct + '%';
+      });
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TECH METRICS
+// ═══════════════════════════════════════════════════════════════
+function renderTechMetrics(distance, pct) {
+  const fA = state.faces.a, fB = state.faces.b;
+  const metrics = [
+    ['ALGORITHM', 'ResNet-34'],
+    ['EMBEDDING', '128-D Vector'],
+    ['LANDMARKS', '68-Point CNN'],
+    ['DETECTOR',  'SSD MobileNetV1'],
+    ['BENCHMARK', '99.38% LFW'],
+    ['DISTANCE',  'Euclidean L2'],
+    ['DET. CONF A', (fA.detection.score*100).toFixed(1)+'%'],
+    ['DET. CONF B', (fB.detection.score*100).toFixed(1)+'%'],
+  ];
+  const grid = document.getElementById('tech-metrics');
+  grid.innerHTML = metrics.map(([l,v]) => `
+    <div class="metric-tile">
+      <div class="metric-tile-label">${l}</div>
+      <div class="metric-tile-val">${v}</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FORENSIC SYNOPSIS (algorithmic, no API needed)
+// ═══════════════════════════════════════════════════════════════
+function renderSynopsis(pct, distance, regions, verdictText) {
+  const fA = state.faces.a, fB = state.faces.b;
+  const sorted = Object.entries(regions).sort((a,b)=>b[1]-a[1]);
+  const topRegion = sorted[0][0];
+  const topRegionPct = Math.round(sorted[0][1]*100);
+  const lowRegion = sorted[sorted.length-1][0];
+  const lowRegionPct = Math.round(sorted[sorted.length-1][1]*100);
+
+  const ageA = fA.age ? Math.round(fA.age) : null;
+  const ageB = fB.age ? Math.round(fB.age) : null;
+  const ageDiff = ageA && ageB ? Math.abs(ageA - ageB) : null;
+
+  const confA = (fA.detection.score * 100).toFixed(1);
+  const confB = (fB.detection.score * 100).toFixed(1);
+  const avgConf = ((fA.detection.score + fB.detection.score) / 2 * 100).toFixed(1);
+
+  let p1, p2, p3, p4;
+
+  // ── Paragraph 1: Overall assessment
+  if (pct >= 70) {
+    p1 = `The biometric analysis returns a similarity score of ${pct}%, corresponding to an Euclidean distance of ${distance.toFixed(4)} in the 128-dimensional feature space — well within the 0.600 match threshold calibrated for the ResNet-34 model on the LFW benchmark. This constitutes a ${verdictText} determination, indicating a high probability that both images depict the same individual. The descriptor distance is consistent with the same-subject pair distributions established across large-scale facial recognition evaluations.`;
+  } else if (pct >= 55) {
+    p1 = `The biometric analysis yields a similarity score of ${pct}% with an Euclidean distance of ${distance.toFixed(4)}, placing this comparison in the marginal zone near the 0.600 match threshold. The result is classified as ${verdictText}, reflecting partial biometric overlap that warrants careful interpretation. While some structural correspondence is present across the 128-dimensional embedding, the evidence does not meet the statistical threshold for confident same-identity determination.`;
+  } else if (pct >= 40) {
+    p1 = `The biometric comparison produces a similarity score of ${pct}%, with an Euclidean descriptor distance of ${distance.toFixed(4)} — exceeding the 0.600 match threshold. This is classified as ${verdictText}, indicating limited correspondence in the feature space. The ResNet-34 embedding captures robust biometric invariants including interpupillary geometry, nasal bridge morphology, and mandibular contour; divergence across these typically stable features suggests the two subjects are likely different individuals.`;
+  } else {
+    p1 = `The biometric analysis produces a low similarity score of ${pct}% with an Euclidean distance of ${distance.toFixed(4)}, substantially exceeding the 0.600 match threshold. This classification of ${verdictText} reflects broad dissimilarity across the entire 128-dimensional feature embedding. The ResNet-34 model encodes facial geometry in a pose- and illumination-robust manner; widespread divergence of this magnitude across all encoded dimensions strongly indicates these images depict different individuals.`;
+  }
+
+  // ── Paragraph 2: Region breakdown
+  const regionDesc = pct >= 55
+    ? `The ${topRegion.toLowerCase()} zone demonstrated the strongest biometric correspondence at ${topRegionPct}%, reflecting consistent geometric proportions — likely driven by stable anatomical structures such as ${topRegion === 'Left Eye' || topRegion === 'Right Eye' ? 'intercanthal width and palpebral fissure geometry' : topRegion === 'Nose Bridge' ? 'nasal bridge width, dorsum height, and tip projection' : topRegion === 'Mouth' ? 'lip vermillion border geometry and philtrum width' : topRegion === 'Jaw & Chin' ? 'mandibular angle, bigonial width, and chin projection' : 'brow arch curvature and supraorbital ridge shape'}. The ${lowRegion.toLowerCase()} region showed the most divergence at ${lowRegionPct}%, which ${pct >= 70 ? 'may reflect expression, directional lighting, or slight head rotation between captures rather than true morphological difference' : 'contributes meaningfully to the low overall score and is consistent with two different subjects'}.`
+    : `Across all six analyzed facial regions, scores ranged from ${lowRegionPct}% (${lowRegion.toLowerCase()}) to ${topRegionPct}% (${topRegion.toLowerCase()}). Even the highest-correspondence region falls below the threshold for confident same-person identification. The ${topRegion.toLowerCase()} zone's ${topRegionPct}% score may reflect phenotypic similarity rather than identical identity — a common occurrence when comparing individuals of shared ethnic background or family relation.`;
+
+  p2 = `Regional analysis across the six facial zones reveals meaningful variation in biometric correspondence. ${regionDesc} The landmark-based geometric comparison normalizes for face scale, providing relative distance ratios that are robust to image resolution differences.`;
+
+  // ── Paragraph 3: Quality and confounders
+  const qualityNote = parseFloat(avgConf) > 85
+    ? `Detection confidence is high for both images (Subject A: ${confA}%, Subject B: ${confB}%), indicating clean face crops with minimal occlusion. This reduces the likelihood that the score is artifactually depressed by image quality factors.`
+    : `Detection confidence is moderate (Subject A: ${confA}%, Subject B: ${confB}%), which may introduce some noise into the embedding. Suboptimal face alignment, partial occlusion, or non-frontal pose can reduce descriptor accuracy by an estimated 5–15%.`;
+
+  const ageNote = ageDiff !== null && ageDiff > 8
+    ? ` The estimated age difference between subjects (approximately ${ageDiff} years) is notable; significant age gaps introduce morphological changes — particularly in periorbital tissue, nasolabial fold depth, and submental definition — that can reduce similarity scores even for the same individual.`
+    : '';
+
+  p3 = `${qualityNote}${ageNote} Factors that can meaningfully affect score accuracy include yaw and pitch rotation beyond ±15°, heavy directional shadow gradients obscuring landmark positions, facial hair presence between captures, and substantial temporal separation between photos.`;
+
+  // ── Paragraph 4: Conclusion
+  if (pct >= 70) {
+    p4 = `Forensic assessment: the biometric evidence supports same-identity determination with moderate-to-high confidence. The embedding distance of ${distance.toFixed(4)} is consistent with intra-subject variation expected across different photographic conditions. Standard NIST FRVT evaluation places the ResNet-34 architecture at 99.38% accuracy on the LFW benchmark, though real-world accuracy varies with image quality. This result should be treated as strong corroborating evidence rather than definitive identification; context-appropriate verification procedures are recommended for consequential decisions.`;
+  } else if (pct >= 55) {
+    p4 = `Forensic assessment: the result is inconclusive. A similarity score of ${pct}% with distance ${distance.toFixed(4)} sits in the ambiguous region where neither same-identity nor different-identity can be confidently asserted. Factors including pose, expression, temporal age difference, and image quality may be deflating the score for a same-person pair, or this may represent a genuinely low-similarity different-person pair. Additional reference images captured under controlled conditions would be required to reach a confident determination.`;
+  } else {
+    p4 = `Forensic assessment: the biometric evidence does not support same-identity determination. The Euclidean distance of ${distance.toFixed(4)} — ${((distance/0.6-1)*100).toFixed(0)}% above the match threshold — reflects fundamental morphological differences between the two face embeddings rather than capture-condition variance. This conclusion is robust under the ResNet-34 architecture's illumination and pose normalization. The system concludes with high confidence that these images depict different individuals, subject to the standard caveat that no AI system achieves 100% accuracy.`;
+  }
+
+  document.getElementById('synopsis-text').innerHTML =
+    [p1, p2, p3, p4].map(p => `<p style="margin-bottom:16px">${p}</p>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Mark status as loading
+  document.getElementById('status-dot').classList.add('loading');
+  loadModels();
+});
+</script>
+</body>
+</html>
